@@ -1,0 +1,39 @@
+-- Ejecutar en Workbench o phpMyAdmin usando una cuenta con permisos DDL.
+CREATE DATABASE IF NOT EXISTS tienda_adso CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE tienda_adso;
+
+CREATE TABLE IF NOT EXISTS clientes (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ nombre VARCHAR(100) NOT NULL,
+ correo VARCHAR(120) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS productos (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ nombre VARCHAR(100) NOT NULL,
+ precio DECIMAL(12,2) NOT NULL CHECK (precio > 0),
+ stock INT NOT NULL DEFAULT 0 CHECK (stock >= 0)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS pedidos (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ cliente_id INT NOT NULL,
+ fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ estado VARCHAR(20) NOT NULL DEFAULT 'confirmado',
+ total DECIMAL(12,2) NOT NULL DEFAULT 0,
+ CONSTRAINT fk_pedido_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS detalle_pedidos (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ pedido_id INT NOT NULL,
+ producto_id INT NOT NULL,
+ cantidad INT NOT NULL CHECK (cantidad > 0),
+ precio_unitario DECIMAL(12,2) NOT NULL,
+ subtotal DECIMAL(12,2) NOT NULL,
+ FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+ FOREIGN KEY (producto_id) REFERENCES productos(id)
+) ENGINE=InnoDB;
+
+-- A la cuenta de la API se le conceden permisos desde una conexión administrativa:
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON tienda_adso.* TO 'api_adso'@'localhost';

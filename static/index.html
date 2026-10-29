@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tienda ADSO - Panel de Control</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f4f6f9;
+      color: #333;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #2c3e50;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+      color: #34495e;
+      border-bottom: 2px solid #f1f1f1;
+      padding-bottom: 8px;
+    }
+
+    .form-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #3498db;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #27ae60;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #219150;
+    }
+
+    button.delete-btn {
+      background-color: #e74c3c;
+      padding: 5px 10px;
+      font-size: 0.85rem;
+    }
+
+    button.delete-btn:hover {
+      background-color: #c0392b;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      color: #2c3e50;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: #7f8c8d;
+      padding: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🛒 Tienda ADSO API</h1>
+
+    <!-- ================= SECCIÓN CLIENTES ================= -->
+    <div class="card">
+      <h2>Agregar Nuevo Cliente</h2>
+      <form id="clientForm" class="form-group">
+        <input type="text" id="nombreCliente" placeholder="Nombre del cliente" required />
+        <input type="email" id="emailCliente" placeholder="Correo electrónico" required />
+        <input type="text" id="telefonoCliente" placeholder="Teléfono" required />
+        <button type="submit">Guardar Cliente</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Lista de Clientes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="clientTableBody">
+          <!-- Se llena dinámicamente con JS -->
+        </tbody>
+      </table>
+      <div id="emptyClientMessage" class="empty-msg" style="display: none;">
+        No hay clientes registrados.
+      </div>
+    </div>
+
+    <!-- ================= SECCIÓN PRODUCTOS ================= -->
+    <div class="card">
+      <h2>Agregar Nuevo Producto</h2>
+      <form id="productForm" class="form-group">
+        <input type="text" id="nombre" placeholder="Nombre del producto" required />
+        <input type="number" id="precio" placeholder="Precio" step="0.01" required />
+        <input type="number" id="stock" placeholder="Stock" required />
+        <button type="submit">Guardar Producto</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Inventario de Productos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="productTableBody">
+          <!-- Se llena dinámicamente con JS -->
+        </tbody>
+      </table>
+      <div id="emptyMessage" class="empty-msg" style="display: none;">
+        No hay productos registrados.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // URLs base de tu API FastAPI
+    const API_PRODUCTS_URL = 'http://127.0.0.1:8000/productos';
+    const API_CLIENTS_URL = 'http://127.0.0.1:8000/clientes';
+
+    // Cargar datos al iniciar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchProducts();
+      fetchClients();
+    });
+
+    // ==========================================
+    // FUNCIONES DE PRODUCTOS
+    // ==========================================
+    async function fetchProducts() {
+      try {
+        const response = await fetch(API_PRODUCTS_URL);
+        const data = await response.json();
+        renderProductTable(data);
+      } catch (error) {
+        console.error('Error al obtener los productos:', error);
+      }
+    }
+
+    function renderProductTable(products) {
+      const tableBody = document.getElementById('productTableBody');
+      const emptyMsg = document.getElementById('emptyMessage');
+      tableBody.innerHTML = '';
+
+      if (!products || products.length === 0) {
+        emptyMsg.style.display = 'block';
+        return;
+      }
+      emptyMsg.style.display = 'none';
+
+      products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${product.id}</td>
+          <td>${product.nombre}</td>
+          <td>$${parseFloat(product.precio).toLocaleString()}</td>
+          <td>${product.stock}</td>
+          <td>
+            <button class="delete-btn" onclick="deleteProduct(${product.id})">Eliminar</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newProduct = {
+        nombre: document.getElementById('nombre').value,
+        precio: parseFloat(document.getElementById('precio').value),
+        stock: parseInt(document.getElementById('stock').value)
+      };
+
+      try {
+        const response = await fetch(API_PRODUCTS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newProduct)
+        });
+
+        if (response.ok) {
+          document.getElementById('productForm').reset();
+          fetchProducts();
+        } else {
+          alert('Error al guardar el producto');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+
+    async function deleteProduct(id) {
+      if (!confirm('¿Estás seguro de eliminar este producto?')) return;
+
+      try {
+        const response = await fetch(`${API_PRODUCTS_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          fetchProducts();
+        } else {
+          alert('Error al eliminar el producto');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    // ==========================================
+    // FUNCIONES DE CLIENTES
+    // ==========================================
+    async function fetchClients() {
+      try {
+        const response = await fetch(API_CLIENTS_URL);
+        const data = await response.json();
+        renderClientTable(data);
+      } catch (error) {
+        console.error('Error al obtener los clientes:', error);
+      }
+    }
+
+    function renderClientTable(clients) {
+      const tableBody = document.getElementById('clientTableBody');
+      const emptyMsg = document.getElementById('emptyMessageC'); // Ajustado
+      const emptyClientMsg = document.getElementById('emptyClientMessage');
+      tableBody.innerHTML = '';
+
+      if (!clients || clients.length === 0) {
+        emptyClientMsg.style.display = 'block';
+        return;
+      }
+      emptyClientMsg.style.display = 'none';
+
+      clients.forEach(client => {
+        const row = document.createElement('tr');
+        // Ajusta los nombres de las propiedades según tu modelo Pydantic de Clientes (ej: client.nombre, client.email, etc.)
+        row.innerHTML = `
+          <td>${client.id}</td>
+          <td>${client.nombre}</td>
+          <td>${client.email}</td>
+          <td>${client.telefono}</td>
+          <td>
+            <button class="delete-btn" onclick="deleteClient(${client.id})">Eliminar</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    document.getElementById('clientForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newClient = {
+        nombre: document.getElementById('nombreCliente').value,
+        email: document.getElementById('emailCliente').value,
+        telefono: document.getElementById('telefonoCliente').value
+      };
+
+      try {
+        const response = await fetch(API_CLIENTS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newClient)
+        });
+
+        if (response.ok) {
+          document.getElementById('clientForm').reset();
+          fetchClients();
+        } else {
+          alert('Error al guardar el cliente');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+
+    async function deleteClient(id) {
+      if (!confirm('¿Estás seguro de eliminar este cliente?')) return;
+
+      try {
+        const response = await fetch(`${API_CLIENTS_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          fetchClients();
+        } else {
+          alert('Error al eliminar el cliente');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+  </script>
+</body>
+</html>

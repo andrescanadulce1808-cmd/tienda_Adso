@@ -1,0 +1,5 @@
+py --version
+python --versionfastapi[standard]
+PyMySQL
+python-dotenv
+email-validator
